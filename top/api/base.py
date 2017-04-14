@@ -51,11 +51,12 @@ def sign(secret, parameters):
     # 如果parameters 是字典类的话
     if hasattr(parameters, "items"):
         keys = parameters.keys()
-        keys.sort()
+        keys = sorted(keys)
 
         parameters = "%s%s%s" % (secret,
             str().join('%s%s' % (key, parameters[key]) for key in keys),
             secret)
+    parameters = parameters.encode('utf-8')
     sign = hashlib.md5(parameters).hexdigest().upper()
     return sign
 
@@ -214,7 +215,7 @@ class RestApi(object):
         #=======================================================================
         # 获取response结果
         #=======================================================================
-        connection = httplib.HTTPConnection(self.__domain, self.__port, False, timeout)
+        connection = httplib.HTTPConnection(self.__domain, self.__port, timeout)
         sys_parameters = {
             P_FORMAT: 'json',
             P_APPKEY: self.__app_key,
@@ -244,24 +245,24 @@ class RestApi(object):
             body = str(form)
             header['Content-type'] = form.get_content_type()
         else:
-            body = urllib.urlencode(application_parameter)
+            body = urllib.parse.urlencode(application_parameter)
 
-        url = N_REST + "?" + urllib.urlencode(sys_parameters)
+        url = N_REST + "?" + urllib.parse.urlencode(sys_parameters)
         connection.request(self.__httpmethod, url, body=body, headers=header)
         response = connection.getresponse();
         if response.status is not 200:
             raise RequestException('invalid http status ' + str(response.status) + ',detail body:' + response.read())
         result = response.read()
-        jsonobj = json.loads(result)
-        if jsonobj.has_key("error_response"):
+        jsonobj = json.loads(result.decode("utf-8"))
+        if "error_response" not in jsonobj:
             error = TopException()
-            if jsonobj["error_response"].has_key(P_CODE) :
+            if P_CODE not in jsonobj["error_response"] :
                 error.errorcode = jsonobj["error_response"][P_CODE]
-            if jsonobj["error_response"].has_key(P_MSG) :
+            if P_MSG not in jsonobj["error_response"] :
                 error.message = jsonobj["error_response"][P_MSG]
-            if jsonobj["error_response"].has_key(P_SUB_CODE) :
+            if P_SUB_CODE not in jsonobj["error_response"] :
                 error.subcode = jsonobj["error_response"][P_SUB_CODE]
-            if jsonobj["error_response"].has_key(P_SUB_MSG) :
+            if P_SUB_MSG not in jsonobj["error_response"] :
                 error.submsg = jsonobj["error_response"][P_SUB_MSG]
             error.application_host = response.getheader("Application-Host", "")
             error.service_host = response.getheader("Location-Host", "")
@@ -271,7 +272,7 @@ class RestApi(object):
 
     def getApplicationParameters(self):
         application_parameter = {}
-        for key, value in self.__dict__.iterms():
+        for key, value in self.__dict__.items():
             if not key.startswith("__") and not key in self.getMultipartParas() and not key.startswith("_RestApi__") and value is not None :
                 if(key.startswith("_")):
                     application_parameter[key[1:]] = value
@@ -279,7 +280,7 @@ class RestApi(object):
                     application_parameter[key] = value
         #查询翻译字典来规避一些关键字属性
         translate_parameter = self.getTranslateParas()
-        for key, value in application_parameter.iterms():
+        for key, value in application_parameter.items():
             if key in translate_parameter:
                 application_parameter[translate_parameter[key]] = application_parameter[key]
                 del application_parameter[key]
