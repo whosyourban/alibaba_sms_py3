@@ -54,17 +54,15 @@ def sign(secret, parameters):
         keys = sorted(keys)
 
         parameters = "%s%s%s" % (secret,
-            str().join('%s%s' % (key, parameters[key]) for key in keys),
+            str().join('%s%s' % (key, parameters[key]) for key in sorted(keys)),
             secret)
-    parameters = parameters.encode('utf-8')
+    parameters = parameters.encode('utf8')
     sign = hashlib.md5(parameters).hexdigest().upper()
     return sign
 
 def mixStr(pstr):
     if(isinstance(pstr, str)):
         return pstr
-    elif(isinstance(pstr, unicode)):
-        return pstr.encode('utf-8')
     else:
         return str(pstr)
 
@@ -254,15 +252,16 @@ class RestApi(object):
             raise RequestException('invalid http status ' + str(response.status) + ',detail body:' + response.read())
         result = response.read()
         jsonobj = json.loads(result.decode("utf-8"))
-        if "error_response" not in jsonobj:
+        print(jsonobj)
+        if "error_response" in jsonobj:
             error = TopException()
-            if P_CODE not in jsonobj["error_response"] :
+            if P_CODE in jsonobj["error_response"] :
                 error.errorcode = jsonobj["error_response"][P_CODE]
-            if P_MSG not in jsonobj["error_response"] :
+            if P_MSG in jsonobj["error_response"] :
                 error.message = jsonobj["error_response"][P_MSG]
-            if P_SUB_CODE not in jsonobj["error_response"] :
+            if P_SUB_CODE in jsonobj["error_response"] :
                 error.subcode = jsonobj["error_response"][P_SUB_CODE]
-            if P_SUB_MSG not in jsonobj["error_response"] :
+            if P_SUB_MSG in jsonobj["error_response"] :
                 error.submsg = jsonobj["error_response"][P_SUB_MSG]
             error.application_host = response.getheader("Application-Host", "")
             error.service_host = response.getheader("Location-Host", "")
